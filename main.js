@@ -33,7 +33,7 @@ pnsz=5    //pen size
 let przltr='B C D'   //letter 
 
 music=new Audio()
-music.src='Happykids.mp3'
+music.src='happykids.mp3'
 music.loop=true
 music.volume=0.4
 
