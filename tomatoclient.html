@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tomato TV Remote</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background-color: #1a1a1a; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; color: white; }
+        .card { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid #444; }
+        input[type="text"], select { padding: 12px; width: calc(100% - 24px); margin-bottom: 10px; border: 1px solid #555; border-radius: 5px; background: #111; color: white; font-size: 16px; }
+        button { padding: 15px; width: 100%; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
+        .btn-primary { background: #ff6347; color: white; }
+        .btn-nav { background: #444; color: white; }
+        .remote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .color-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+        .btn-red { background: red; color: white; }
+        .btn-green { background: green; color: white; }
+        .btn-yellow { background: yellow; color: black; }
+        .btn-blue { background: blue; color: white; }
+        .status-on { color: #00ffcc; font-weight: bold; }
+        .status-off { color: #ff4d4d; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h3>🍅 Tomato TV Remote</h3>
+    
+    <div class="card">
+        <div>TV Status: <span id="conn" class="status-off">CONNECTING...</span></div>
+    </div>
+
+    <div class="card">
+        <label style="font-size: 14px; display:block; text-align:left; margin-bottom:5px;">M3U History & Link:</label>
+        <select id="m3u-history" onchange="selectHistoryLink()">
+            <option value="">-- Select from History --</option>
+        </select>
+        <input type="text" id="m3u-input" placeholder="Paste or type M3U URL...">
+        <button class="btn-primary" onclick="sendPlaylist()">Load M3U to TV</button>
+    </div>
+
+    <div class="card">
+        <div class="remote-grid">
+            <button class="btn-nav" onclick="sendCmd('up')">▲ Up</button>
+            <button class="btn-nav" onclick="sendCmd('down')">▼ Down</button>
+            <button class="btn-nav" onclick="sendCmd('ok')">OK / Select</button>
+            <button class="btn-nav" onclick="sendCmd('back')">Back</button>
+        </div>
+        <div class="color-btns">
+            <button class="btn-red" onclick="sendCmd('red')">Red</button>
+            <button class="btn-green" onclick="sendCmd('green')">Green</button>
+            <button class="btn-yellow" onclick="sendCmd('yellow')">Yellow</button>
+            <button class="btn-blue" onclick="sendCmd('blue')">Blue</button>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tvId = urlParams.get('tv');
+        let connection = null;
+
+        // Load local M3U history on phone
+        let m3uHistory = JSON.parse(localStorage.getItem('tomato_phone_m3u_history')) || [];
+        updateHistoryUI();
+
+        function updateHistoryUI() {
+            const select = document.getElementById('m3u-history');
+            select.innerHTML = '<option value="">-- Select from History --</option>';
+            m3uHistory.forEach(link => {
+                let opt = document.createElement('option');
+                opt.value = link;
+                opt.innerText = link.length > 40 ? link.substring(0, 37) + '...' : link;
+                select.appendChild(opt);
+            });
+        }
+
+        function selectHistoryLink() {
+            const val = document.getElementById('m3u-history').value;
+            if(val) document.getElementById('m3u-input').value = val;
+        }
+
+        if (!tvId) {
+            document.getElementById('conn').innerText = 'ERROR: NO TV ID IN URL';
+        } else {
+            const peer = new Peer();
+            peer.on('open', () => {
+                connection = peer.connect(tvId, { reliable: true });
+                connection.on('open', () => {
+                    document.getElementById('conn').innerText = 'CONNECTED';
+                    document.getElementById('conn').className = 'status-on';
+                });
+                connection.on('close', () => {
+                    document.getElementById('conn').innerText = 'DISCONNECTED';
+                    document.getElementById('conn').className = 'status-off';
+                });
+            });
+        }
+
+        const send = (type, payload) => {
+            if (connection && connection.open) {
+                connection.send({ type, payload });
+            }
+        };
+
+        function sendCmd(cmd) {
+            send('cmd', { command: cmd });
+        }
+
+        function sendPlaylist() {
+            const url = document.getElementById('m3u-input').value.trim();
+            if(!url) return alert('Please enter or select an M3U link.');
+            
+            // Save to phone local storage history
+            if(!m3uHistory.includes(url)) {
+                m3uHistory.unshift(url);
+                if(m3uHistory.length > 10) m3uHistory.pop(); // keep last 10
+                localStorage.setItem('tomato_phone_m3u_history', JSON.stringify(m3uHistory));
+                updateHistoryUI();
+            }
+            send('load_m3u', { url: url });
+            alert('M3U command transmitted to Tomato TV via WebRTC.');
+        }
+    </script>
+</body>
+</html>
