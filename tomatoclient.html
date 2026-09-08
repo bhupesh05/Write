@@ -11,13 +11,14 @@
         button { padding: 15px; width: 100%; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
         .btn-primary { background: #ff6347; color: white; }
         .btn-nav { background: #444; color: white; }
-        .remote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .remote-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .color-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
         .btn-red { background: red; color: white; }
         .btn-green { background: green; color: white; }
         .btn-yellow { background: yellow; color: black; }
         .btn-blue { background: blue; color: white; }
-        #touchpad { width: 100%; height: 200px; background: #111; color: #aaa; border-radius: 8px; touch-action: none; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; border: 1px dashed #555; font-size: 14px; }
+        .btn-thinq { background: #9c27b0; color: white; grid-column: span 3; }
+        #touchpad { width: 100%; height: 220px; background: #111; color: #aaa; border-radius: 8px; touch-action: none; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; border: 1px dashed #777; font-size: 16px; font-weight: bold; }
         .status-on { color: #00ffcc; font-weight: bold; }
         .status-off { color: #ff4d4d; font-weight: bold; }
     </style>
@@ -39,18 +40,21 @@
     </div>
 
     <div class="card">
-        <div id="touchpad">TOUCHPAD (Swipe to Navigate)</div>
-        <div class="remote-grid">
-            <button class="btn-nav" onclick="sendCmd('up')">▲ Up</button>
-            <button class="btn-nav" onclick="sendCmd('down')">▼ Down</button>
-            <button class="btn-nav" onclick="sendCmd('ok')">OK / Select</button>
+        <div id="touchpad">🖱️ TOUCHPAD (Swipe to Move Cursor)</div>
+        <div class="remote-grid" style="margin-bottom: 8px;">
+            <button class="btn-nav" onclick="sendCmd('vol_up')">Vol +</button>
+            <button class="btn-nav" onclick="sendCmd('ch_up')">CH ▲</button>
             <button class="btn-nav" onclick="sendCmd('back')">Back</button>
+            <button class="btn-nav" onclick="sendCmd('vol_down')">Vol -</button>
+            <button class="btn-nav" onclick="sendCmd('ch_down')">CH ▼</button>
+            <button class="btn-nav" onclick="sendCmd('ok')">OK</button>
         </div>
+        <button class="btn-thinq" onclick="sendCmd('thinq')">🎙️ ThinQ AI Interaction</button>
         <div class="color-btns">
-            <button class="btn-red" onclick="sendCmd('red')">Red</button>
-            <button class="btn-green" onclick="sendCmd('green')">Green</button>
-            <button class="btn-yellow" onclick="sendCmd('yellow')">Yellow</button>
-            <button class="btn-blue" onclick="sendCmd('blue')">Blue</button>
+            <button class="btn-red" onclick="sendCmd('red')">Settings</button>
+            <button class="btn-green" onclick="sendCmd('green')">Test</button>
+            <button class="btn-yellow" onclick="sendCmd('yellow')">Working</button>
+            <button class="btn-blue" onclick="sendCmd('blue')">All Lists</button>
         </div>
     </div>
 
@@ -105,11 +109,28 @@
             send('cmd', { command: cmd });
         }
 
-        // Touchpad tracking
+        // Active Touchpad Tracking for Mouse Cursor
+        let lastX = 0, lastY = 0;
         const pad = document.getElementById('touchpad');
-        pad.addEventListener('touchstart', e => send('touch', { state: 'start', x: Math.round(e.touches[0].clientX), y: Math.round(e.touches[0].clientY) }));
-        pad.addEventListener('touchmove', e => send('touch', { state: 'move', x: Math.round(e.touches[0].clientX), y: Math.round(e.touches[0].clientY) }));
+        
+        pad.addEventListener('touchstart', e => {
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+            send('touch', { state: 'start', x: lastX, y: lastY });
+        });
+
+        pad.addEventListener('touchmove', e => {
+            let currentX = e.touches[0].clientX;
+            let currentY = e.touches[0].clientY;
+            let deltaX = currentX - lastX;
+            let deltaY = currentY - lastY;
+            lastX = currentX;
+            lastY = currentY;
+            send('touch', { state: 'move', dx: deltaX, dy: deltaY });
+        });
+
         pad.addEventListener('touchend', () => send('touch', { state: 'end' }));
+        pad.addEventListener('click', () => sendCmd('ok'));
 
         function sendPlaylist() {
             const url = document.getElementById('m3u-input').value.trim();
@@ -121,7 +142,7 @@
                 updateHistoryUI();
             }
             send('load_m3u', { url: url });
-            alert('M3U command transmitted to Tomato TV.');
+            alert('M3U playlist sent to Tomato TV.');
         }
     </script>
 </body>
