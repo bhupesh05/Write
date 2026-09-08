@@ -53,7 +53,7 @@
         <button class="btn-thinq" onclick="sendCmd('thinq')">🎙️ ThinQ AI Interaction</button>
         <div class="color-btns">
             <button class="btn-red" onclick="sendCmd('red')">Settings</button>
-            <button class="btn-green" onclick="sendCmd('green')">Test</button>
+            <button class="btn-green" onclick="sendCmd('green')">QR Code</button>
             <button class="btn-yellow" onclick="sendCmd('yellow')">Working</button>
             <button class="btn-blue" onclick="sendCmd('blue')">All Lists</button>
         </div>
@@ -101,7 +101,6 @@
         } else {
             phoneLog(`Initializing Peer connection to TV ID: ${tvId}`);
             
-            // Explicit public STUN servers to guarantee P2P NAT traversal and fix refusal errors
             const peer = new Peer({
                 config: {
                     iceServers: [
@@ -119,6 +118,12 @@
                     phoneLog("Successfully connected to TV WebRTC host!");
                     document.getElementById('conn').innerText = 'CONNECTED';
                     document.getElementById('conn').className = 'status-on';
+                });
+
+                connection.on('data', (incoming) => {
+                    if (incoming.type === 'log') {
+                        phoneLog(`[TV LOG]: ${incoming.payload.message}`);
+                    }
                 });
 
                 connection.on('error', (err) => {
@@ -152,7 +157,7 @@
             send('cmd', { command: cmd });
         }
 
-        // Fixed Touchpad Coordinates & Movement Tracking
+        // Fast Touchpad Movement Tracking (No accidental clicks on tap)
         let lastX = 0, lastY = 0;
         const pad = document.getElementById('touchpad');
         
@@ -173,7 +178,6 @@
         });
 
         pad.addEventListener('touchend', () => send('touch', { state: 'end' }));
-        pad.addEventListener('click', () => sendCmd('ok'));
 
         function sendPlaylist() {
             const url = document.getElementById('m3u-input').value.trim();
