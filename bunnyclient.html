@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bunny TV Remote</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background-color: #f4f4f4; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; }
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left;}
+        #touchpad { width: 100%; height: 250px; background: #222; color: #fff; border-radius: 10px; touch-action: none; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;}
+        input[type="text"] { padding: 12px; width: calc(100% - 24px); margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 15px; width: 100%; font-size: 16px; background: #ff5500; color: white; border: none; border-radius: 8px; font-weight: bold; margin-bottom: 10px; }
+        .status-on { color: green; font-weight: bold; }
+        .status-off { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h3>📱 Bunny Client (WebRTC)</h3>
+    
+    <div class="card grid">
+        <div>TV Status: <span id="conn" class="status-off">CONNECTING...</span></div>
+        <div>Network Lag: <span id="lat" style="color: blue; font-weight:bold;">-</span> ms</div>
+        <div style="grid-column: span 2;">TV OS Time: <span id="server-time">-</span></div>
+    </div>
+
+    <div class="card">
+        <input type="text" id="htmlInput" placeholder="HTML Input Testing...">
+        <button onclick="sendInput()">SEND TEXT DATA</button>
+    </div>
+
+    <div id="touchpad">REMOTE TOUCHPAD (Swipe here)</div>
+    <button onclick="testMemory()">TEST MEMORY / DATA TRANSFER (1MB)</button>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tvId = urlParams.get('tv');
+        let lastPing = 0;
+        let connection = null;
+
+        if (!tvId) {
+            document.getElementById('conn').innerText = 'NO TV ID IN URL';
+        } else {
+            const peer = new Peer();
+            
+            peer.on('open', () => {
+                connection = peer.connect(tvId, { reliable: true });
+                
+                connection.on('open', () => {
+                    document.getElementById('conn').innerText = 'CONNECTED';
+                    document.getElementById('conn').className = 'status-on';
+
+                    // Health & Lag Check loop
+                    setInterval(() => {
+                        lastPing = Date.now();
+                        send('ping', { time: lastPing });
+                    }, 1500);
+                });
+
+                connection.on('data', (data) => {
+                    if (data.type === 'pong') {
+                        document.getElementById('lat').innerText = Date.now() - lastPing;
+                        document.getElementById('server-time').innerText = new Date(data.payload.serverTime).toLocaleTimeString();
+                    }
+                });
+
+                connection.on('close', () => {
+                    document.getElementById('conn').innerText = 'DISCONNECTED';
+                    document.getElementById('conn').className = 'status-off';
+                });
+            });
+        }
+
+        const send = (type, payload) => {
+            if (connection && connection.open) {
+                connection.send({ type, payload });
+            }
+        };
+
+        // Touch Coordinate Tracking
+        const pad = document.getElementById('touchpad');
+        pad.addEventListener('touchstart', e => send('touch', { state: 'start', x: Math.round(e.touches[0].clientX), y: Math.round(e.touches[0].clientY) }));
+        pad.addEventListener('touchmove', e => send('touch', { state: 'move', x: Math.round(e.touches[0].clientX), y: Math.round(e.touches[0].clientY) }));
+        pad.addEventListener('touchend', () => send('touch', { state: 'end' }));
+
+        function sendInput() {
+            send('input', { text: document.getElementById('htmlInput').value });
+        }
+
+        function testMemory() {
+            const dummyData = new Array(10000).fill('BUNNYTV_DATA_PACKET_TEST').join('');
+            const sizeInKb = (new Blob([dummyData]).size / 1024).toFixed(2);
+            send('memory_test', { packetSize: `${sizeInKb} KB`, timestamp: Date.now() });
+            alert(`Sent ${sizeInKb} KB Data packet to TV for memory processing via WebRTC.`);
+        }
+    </script>
+</body>
+</html>
