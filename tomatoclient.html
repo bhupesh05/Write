@@ -8,7 +8,8 @@
         body { background-color: #1a1a1a; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; color: white; }
         .card { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid #444; text-align: left; }
         input[type="text"], select { padding: 12px; width: calc(100% - 24px); margin-bottom: 10px; border: 1px solid #555; border-radius: 5px; background: #111; color: white; font-size: 16px; box-sizing: border-box; }
-        button { padding: 15px; width: 100%; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; margin-bottom: 10px; cursor: pointer; box-sizing: border-box; }
+        button { padding: 15px; width: 100%; font-size: 16px; border: none; border-radius: 8px; font-weight: bold; margin-bottom: 10px; cursor: pointer; box-sizing: border-box; transition: background 0.1s; }
+        
         .btn-primary { background: #ff6347; color: white; }
         .btn-nav { background: #444; color: white; }
         .btn-nav:active { background: #ff6347; }
@@ -16,18 +17,17 @@
         .remote-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
         .color-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 15px; }
         
-        /* D-Pad specific Layout */
+        /* D-Pad Styles */
         .dpad-container { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 8px; max-width: 260px; margin: 0 auto 15px auto; }
         .dpad-blank { background: transparent; pointer-events: none; }
         .btn-dpad { background: #333; color: white; border-radius: 8px; font-size: 26px; padding: 25px 0; border: 2px solid #555; font-weight: bold; cursor: pointer; }
         .btn-dpad:active { background: #ff6347; border-color: white; }
-        .btn-dpad-ok { background: #ff6347; border-radius: 50%; color: white; font-size: 20px; }
+        .btn-dpad-ok { background: #ff6347; border-radius: 50%; color: white; font-size: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
 
         .btn-red { background: red; color: white; }
         .btn-green { background: green; color: white; }
         .btn-yellow { background: yellow; color: black; }
         .btn-blue { background: blue; color: white; }
-        .btn-thinq { background: #9c27b0; color: white; grid-column: span 3; }
         
         .phone-log { background: #050505; border: 1px solid #333; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 14px; color: #00ffcc; height: 120px; overflow-y: auto; line-height: 1.4; }
         .status-on { color: #00ffcc; font-weight: bold; }
@@ -35,7 +35,7 @@
     </style>
 </head>
 <body>
-    <h3 style="text-align: center;">🍅 Tomato TV Remote</h3>
+    <h3 style="text-align: center; color: #ff6347; margin-top: 5px;">🍅 Tomato TV Remote</h3>
 
     <div class="card" style="text-align: center;">
         <div>TV Status: <span id="conn" class="status-off">CONNECTING...</span></div>
@@ -59,7 +59,7 @@
 
         <div class="remote-grid">
             <button class="btn-nav" onclick="sendCmd('vol_up')">Vol +</button>
-            <button class="btn-nav" onclick="sendCmd('back')" style="background: #222;">Back / Prev</button>
+            <button class="btn-nav" onclick="sendCmd('back')" style="background: #222;">Back/Exit</button>
             <button class="btn-nav" onclick="sendCmd('ch_up')">CH ▲</button>
             
             <button class="btn-nav" onclick="sendCmd('vol_down')">Vol -</button>
@@ -127,11 +127,7 @@
             phoneLog(`Initializing Peer connection to TV ID: ${tvId}`);
 
             const peer = new Peer({
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' }
-                    ]
-                }
+                config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
             });
 
             peer.on('open', () => {
